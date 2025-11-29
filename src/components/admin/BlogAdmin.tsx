@@ -5,33 +5,35 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Icon } from '@iconify/react';
 
-type Trip = {
+type BlogPost = {
   id: string;
   slug: string;
   title: string;
-  featured: boolean;
-  summary: string | null;
+  excerpt: string | null;
+  author: string | null;
+  published: boolean;
   createdAt: string;
 };
 
-type ApiTrip = Omit<Trip, 'createdAt'> & { createdAt: string | number | Date } & {
+type ApiBlogPost = Omit<BlogPost, 'createdAt'> & { createdAt: string | number | Date } & {
+  content: string;
+  coverImage?: string | null;
   metaTitle?: string | null;
   metaDescription?: string | null;
   metaOgImage?: string | null;
-  data: unknown;
+  tags?: string[] | null;
 };
 
-export function TripsAdmin() {
+export function BlogAdmin() {
   const router = useRouter();
-  const [trips, setTrips] = useState<Trip[]>([]);
+  const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [slug, setSlug] = useState('');
   const [title, setTitle] = useState('');
-  const [featured, setFeatured] = useState(false);
-  const [summary, setSummary] = useState('');
+  const [excerpt, setExcerpt] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -39,19 +41,20 @@ export function TripsAdmin() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch('/api/trips');
+        const res = await fetch('/api/blog');
         if (!res.ok) {
-          throw new Error(`Failed to load trips: ${res.status}`);
+          throw new Error(`Failed to load posts: ${res.status}`);
         }
-        const json = (await res.json()) as ApiTrip[];
-        setTrips(
-          json.map((t) => ({
-            id: t.id,
-            slug: t.slug,
-            title: t.title,
-            featured: Boolean(t.featured),
-            summary: t.summary ?? null,
-            createdAt: new Date(t.createdAt).toLocaleString(),
+        const json = (await res.json()) as ApiBlogPost[];
+        setPosts(
+          json.map((p) => ({
+            id: p.id,
+            slug: p.slug,
+            title: p.title,
+            excerpt: p.excerpt ?? null,
+            author: p.author ?? null,
+            published: Boolean(p.published),
+            createdAt: new Date(p.createdAt).toLocaleString(),
           }))
         );
       } catch (e: any) {
@@ -70,51 +73,51 @@ export function TripsAdmin() {
     setError(null);
 
     try {
-      const res = await fetch('/api/trips', {
+      const res = await fetch('/api/blog', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           slug,
           title,
-          featured,
-          summary: summary || undefined,
-          data: {}, // Empty data object - will be filled in edit page
+          excerpt: excerpt || undefined,
+          content: '', // Empty content - will be filled in editor
+          published: false,
         }),
       });
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || `Failed to create trip: ${res.status}`);
+        throw new Error(body.error || `Failed to create post: ${res.status}`);
       }
 
-      const created = (await res.json()) as ApiTrip;
+      const created = (await res.json()) as ApiBlogPost;
       
       // Redirect to edit page
-      router.push(`/admin/trips/${created.id}`);
+      router.push(`/admin/blog/${created.id}`);
     } catch (err: any) {
-      setError(err.message ?? 'Failed to create trip');
+      setError(err.message ?? 'Failed to create post');
       setSaving(false);
     }
   };
 
   const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`Delete trip "${title}"?`)) return;
+    if (!confirm(`Delete post "${title}"?`)) return;
 
     try {
-      const res = await fetch(`/api/trips/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/blog/${id}`, { method: 'DELETE' });
       if (!res.ok) {
         throw new Error('Failed to delete');
       }
-      setTrips((prev) => prev.filter((t) => t.id !== id));
+      setPosts((prev) => prev.filter((p) => p.id !== id));
     } catch (err: any) {
-      setError(err.message ?? 'Failed to delete trip');
+      setError(err.message ?? 'Failed to delete post');
     }
   };
 
   const stats = {
-    total: trips.length,
-    featured: trips.filter((t) => t.featured).length,
-    regular: trips.filter((t) => !t.featured).length,
+    total: posts.length,
+    published: posts.filter((p) => p.published).length,
+    draft: posts.filter((p) => !p.published).length,
   };
 
   return (
@@ -124,12 +127,12 @@ export function TripsAdmin() {
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex items-center gap-4 mb-4">
             <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
-              <Icon icon="mdi:map-marker-path" className="w-7 h-7" />
+              <Icon icon="mdi:post" className="w-7 h-7" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold">Trips Admin</h1>
+              <h1 className="text-3xl font-bold">Blog Admin</h1>
               <p className="text-teal-100 text-sm">
-                Manage your travel experiences and itineraries
+                Manage your blog posts and articles
               </p>
             </div>
           </div>
@@ -139,28 +142,28 @@ export function TripsAdmin() {
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-teal-100 text-sm">Total Trips</p>
+                  <p className="text-teal-100 text-sm">Total Posts</p>
                   <p className="text-3xl font-bold mt-1">{stats.total}</p>
                 </div>
-                <Icon icon="mdi:earth" className="w-10 h-10 text-white/40" />
+                <Icon icon="mdi:file-document-multiple" className="w-10 h-10 text-white/40" />
               </div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-teal-100 text-sm">Featured</p>
-                  <p className="text-3xl font-bold mt-1">{stats.featured}</p>
+                  <p className="text-teal-100 text-sm">Published</p>
+                  <p className="text-3xl font-bold mt-1">{stats.published}</p>
                 </div>
-                <Icon icon="mdi:star" className="w-10 h-10 text-white/40" />
+                <Icon icon="mdi:check-circle" className="w-10 h-10 text-white/40" />
               </div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-teal-100 text-sm">Regular</p>
-                  <p className="text-3xl font-bold mt-1">{stats.regular}</p>
+                  <p className="text-teal-100 text-sm">Drafts</p>
+                  <p className="text-3xl font-bold mt-1">{stats.draft}</p>
                 </div>
-                <Icon icon="mdi:compass" className="w-10 h-10 text-white/40" />
+                <Icon icon="mdi:file-edit" className="w-10 h-10 text-white/40" />
               </div>
             </div>
           </div>
@@ -179,13 +182,13 @@ export function TripsAdmin() {
           </div>
         )}
 
-        {/* Trips List */}
+        {/* Posts List */}
         <section className="bg-white rounded-xl shadow-lg border border-gray-200">
           <div className="px-6 py-5 border-b border-gray-200 flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">All Trips</h2>
+              <h2 className="text-xl font-bold text-gray-900">All Posts</h2>
               <p className="text-sm text-gray-500 mt-1">
-                Click Edit to open the visual editor for any trip
+                Click Edit to open the editor for any post
               </p>
             </div>
             <button
@@ -193,7 +196,7 @@ export function TripsAdmin() {
               className="inline-flex items-center gap-2 px-4 py-2 bg-[#037280] text-white font-semibold rounded-lg hover:bg-[#025b66] transition-all shadow-md hover:shadow-lg"
             >
               <Icon icon="mdi:plus" className="w-5 h-5" />
-              New Trip
+              New Post
             </button>
           </div>
 
@@ -201,33 +204,33 @@ export function TripsAdmin() {
             {loading && (
               <div className="flex flex-col items-center justify-center py-16">
                 <Icon icon="mdi:loading" className="w-12 h-12 text-[#037280] animate-spin mb-4" />
-                <p className="text-gray-600">Loading trips...</p>
+                <p className="text-gray-600">Loading posts...</p>
               </div>
             )}
 
-            {!loading && trips.length === 0 && !error && (
+            {!loading && posts.length === 0 && !error && (
               <div className="flex flex-col items-center justify-center py-16">
                 <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                  <Icon icon="mdi:package-variant" className="w-10 h-10 text-gray-400" />
+                  <Icon icon="mdi:post-outline" className="w-10 h-10 text-gray-400" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No trips yet</h3>
-                <p className="text-gray-500 text-sm mb-6">Get started by creating your first trip below</p>
-                <a
-                  href="#create-form"
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No posts yet</h3>
+                <p className="text-gray-500 text-sm mb-6">Get started by creating your first blog post</p>
+                <button
+                  onClick={() => setShowCreateForm(true)}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-[#037280] text-white rounded-lg hover:bg-[#025b66] transition-colors"
                 >
                   <Icon icon="mdi:plus" className="w-5 h-5" />
-                  Create First Trip
-                </a>
+                  Create First Post
+                </button>
               </div>
             )}
 
-            {!loading && trips.length > 0 && (
+            {!loading && posts.length > 0 && (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="text-left px-4 py-3 text-sm font-semibold text-gray-700">Trip</th>
+                      <th className="text-left px-4 py-3 text-sm font-semibold text-gray-700">Post</th>
                       <th className="text-left px-4 py-3 text-sm font-semibold text-gray-700">Slug</th>
                       <th className="text-left px-4 py-3 text-sm font-semibold text-gray-700">Status</th>
                       <th className="text-left px-4 py-3 text-sm font-semibold text-gray-700">Created</th>
@@ -235,53 +238,53 @@ export function TripsAdmin() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {trips.map((trip) => (
-                      <tr key={trip.id} className="hover:bg-gray-50 transition-colors">
+                    {posts.map((post) => (
+                      <tr key={post.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-gradient-to-br from-[#037280] to-[#c17c6f] rounded-lg flex items-center justify-center flex-shrink-0">
-                              <Icon icon="mdi:airplane" className="w-5 h-5 text-white" />
+                              <Icon icon="mdi:post" className="w-5 h-5 text-white" />
                             </div>
                             <div>
-                              <p className="font-semibold text-gray-900">{trip.title}</p>
-                              {trip.summary && (
-                                <p className="text-xs text-gray-500 line-clamp-1">{trip.summary}</p>
+                              <p className="font-semibold text-gray-900">{post.title}</p>
+                              {post.excerpt && (
+                                <p className="text-xs text-gray-500 line-clamp-1">{post.excerpt}</p>
                               )}
                             </div>
                           </div>
                         </td>
                         <td className="px-4 py-4">
                           <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-700">
-                            {trip.slug}
+                            {post.slug}
                           </code>
                         </td>
                         <td className="px-4 py-4">
-                          {trip.featured ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-800 text-xs font-medium rounded-full">
-                              <Icon icon="mdi:star" className="w-3.5 h-3.5" />
-                              Featured
+                          {post.published ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                              <Icon icon="mdi:check-circle" className="w-3.5 h-3.5" />
+                              Published
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">
-                              <Icon icon="mdi:circle-outline" className="w-3.5 h-3.5" />
-                              Regular
+                              <Icon icon="mdi:file-edit" className="w-3.5 h-3.5" />
+                              Draft
                             </span>
                           )}
                         </td>
                         <td className="px-4 py-4">
-                          <p className="text-sm text-gray-600">{trip.createdAt}</p>
+                          <p className="text-sm text-gray-600">{post.createdAt}</p>
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex items-center justify-end gap-2">
                             <Link
-                              href={`/admin/trips/${trip.id}`}
+                              href={`/admin/blog/${post.id}`}
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 text-sm font-medium rounded-lg hover:bg-blue-100 transition-colors"
                             >
                               <Icon icon="mdi:pencil" className="w-4 h-4" />
                               Edit
                             </Link>
                             <button
-                              onClick={() => handleDelete(trip.id, trip.title)}
+                              onClick={() => handleDelete(post.id, post.title)}
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 text-sm font-medium rounded-lg hover:bg-red-100 transition-colors"
                             >
                               <Icon icon="mdi:delete" className="w-4 h-4" />
@@ -304,7 +307,7 @@ export function TripsAdmin() {
                 <div className="flex items-start gap-3 mb-4">
                   <Icon icon="mdi:information-outline" className="w-5 h-5 text-blue-600 mt-0.5" />
                   <p className="text-sm text-blue-800">
-                    Create a basic trip entry. You'll be redirected to the full editor to add all details (gallery, itinerary, pricing, etc.)
+                    Create a basic post entry. You'll be redirected to the full editor to write your content.
                   </p>
                 </div>
 
@@ -317,7 +320,7 @@ export function TripsAdmin() {
                     <input
                       type="text"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#037280] focus:border-transparent"
-                      placeholder="sri-lanka-family-trip"
+                      placeholder="my-amazing-blog-post"
                       value={slug}
                       onChange={(e) => setSlug(e.target.value)}
                       required
@@ -331,7 +334,7 @@ export function TripsAdmin() {
                     <input
                       type="text"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#037280] focus:border-transparent"
-                      placeholder="Sri Lanka Family Adventure"
+                      placeholder="My Amazing Blog Post"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       required
@@ -342,29 +345,15 @@ export function TripsAdmin() {
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     <Icon icon="mdi:text" className="w-4 h-4 inline mr-1" />
-                    Summary <span className="text-gray-400 font-normal">(optional)</span>
+                    Excerpt <span className="text-gray-400 font-normal">(optional)</span>
                   </label>
                   <textarea
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#037280] focus:border-transparent resize-none"
                     rows={2}
-                    placeholder="Brief description..."
-                    value={summary}
-                    onChange={(e) => setSummary(e.target.value)}
+                    placeholder="Brief summary..."
+                    value={excerpt}
+                    onChange={(e) => setExcerpt(e.target.value)}
                   />
-                </div>
-
-                <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                  <input
-                    id="featured"
-                    type="checkbox"
-                    className="w-4 h-4 text-[#037280] rounded"
-                    checked={featured}
-                    onChange={(e) => setFeatured(e.target.checked)}
-                  />
-                  <label htmlFor="featured" className="text-sm font-medium text-gray-900 flex items-center gap-1">
-                    <Icon icon="mdi:star" className="w-4 h-4 text-amber-600" />
-                    Featured Trip
-                  </label>
                 </div>
 
                 <div className="flex items-center gap-3 pt-2">
@@ -381,7 +370,7 @@ export function TripsAdmin() {
                     ) : (
                       <>
                         <Icon icon="mdi:plus-circle" className="w-4 h-4" />
-                        Create Trip
+                        Create Post
                       </>
                     )}
                   </button>

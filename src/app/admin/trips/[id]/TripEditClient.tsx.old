@@ -1,0 +1,940 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Icon } from '@iconify/react';
+import { Button } from '@/components/ui/button';
+import ArrayItem from '@/components/admin/ArrayItem';
+
+type TripData = {
+  id: string;
+  slug: string;
+  title: string;
+  featured: boolean;
+  summary: string | null;
+  metaTitle: string | null;
+  metaDescription: string | null;
+  metaOgImage: string | null;
+  data: any;
+  createdAt: string | number | Date;
+  updatedAt: string | number | Date;
+};
+
+export default function TripEditClient({ trip }: { trip: TripData }) {
+  const router = useRouter();
+  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [message, setMessage] = useState('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Scalar fields
+  const [featured, setFeatured] = useState(trip.featured || false);
+  const [metaTitle, setMetaTitle] = useState(trip.metaTitle || '');
+  const [metaDescription, setMetaDescription] = useState(trip.metaDescription || '');
+  const [metaOgImage, setMetaOgImage] = useState(trip.metaOgImage || '');
+  const [heroTitle, setHeroTitle] = useState(trip.data?.hero?.title || '');
+  const [heroSubtitle, setHeroSubtitle] = useState(trip.data?.hero?.subtitle || '');
+  const [overviewTitle, setOverviewTitle] = useState(trip.data?.overview?.title || '');
+  const [overviewImageSrc, setOverviewImageSrc] = useState(trip.data?.overview?.image?.src || '');
+  const [overviewImageAlt, setOverviewImageAlt] = useState(trip.data?.overview?.image?.alt || '');
+  const [pricingTitle, setPricingTitle] = useState(trip.data?.pricing?.title || '');
+  const [pricingDescription, setPricingDescription] = useState(trip.data?.pricing?.description || '');
+
+  // Arrays
+  const [gallery, setGallery] = useState(trip.data?.gallery || []);
+  const [paragraphs, setParagraphs] = useState(trip.data?.overview?.paragraphs || []);
+  const [tags, setTags] = useState(trip.data?.overview?.tags || []);
+  const [prices, setPrices] = useState(trip.data?.pricing?.prices || []);
+  const [dailyItinerary, setDailyItinerary] = useState(trip.data?.itinerary || []);
+  const [accommodations, setAccommodations] = useState(trip.data?.accommodations || []);
+  const [faq, setFaq] = useState(trip.data?.faq || []);
+
+  // Mark as changed
+  const markChanged = useCallback(() => {
+    setHasUnsavedChanges(true);
+  }, []);
+
+  // Gallery functions
+  const addGalleryImage = () => {
+    setGallery([...gallery, { src: '', alt: '' }]);
+    markChanged();
+  };
+
+  const removeGalleryImage = (index: number) => {
+    setGallery(gallery.filter((_, i) => i !== index));
+    markChanged();
+  };
+
+  const updateGalleryImage = (index: number, field: 'src' | 'alt', value: string) => {
+    const newGallery = [...gallery];
+    newGallery[index] = { ...newGallery[index], [field]: value };
+    setGallery(newGallery);
+    markChanged();
+  };
+
+  // Paragraph functions
+  const addParagraph = () => {
+    setParagraphs([...paragraphs, '']);
+    markChanged();
+  };
+
+  const removeParagraph = (index: number) => {
+    setParagraphs(paragraphs.filter((_, i) => i !== index));
+    markChanged();
+  };
+
+  const updateParagraph = (index: number, value: string) => {
+    const newParagraphs = [...paragraphs];
+    newParagraphs[index] = value;
+    setParagraphs(newParagraphs);
+    markChanged();
+  };
+
+  // Tag functions
+  const addTag = () => {
+    setTags([...tags, { icon: 'lucide:info', label: '', value: '' }]);
+    markChanged();
+  };
+
+  const removeTag = (index: number) => {
+    setTags(tags.filter((_, i) => i !== index));
+    markChanged();
+  };
+
+  const updateTag = (index: number, field: 'icon' | 'label' | 'value', value: string) => {
+    const newTags = [...tags];
+    newTags[index] = { ...newTags[index], [field]: value };
+    setTags(newTags);
+    markChanged();
+  };
+
+  // Price functions
+  const addPrice = () => {
+    setPrices([...prices, { package: '', early_booking: '', standard: '' }]);
+    markChanged();
+  };
+
+  const removePrice = (index: number) => {
+    setPrices(prices.filter((_, i) => i !== index));
+    markChanged();
+  };
+
+  const updatePrice = (index: number, field: string, value: string) => {
+    const newPrices = [...prices];
+    newPrices[index] = { ...newPrices[index], [field]: value };
+    setPrices(newPrices);
+    markChanged();
+  };
+
+  // Daily itinerary functions
+  const addDay = () => {
+    const newDay = dailyItinerary.length + 1;
+    setDailyItinerary([
+      ...dailyItinerary,
+      { day: newDay, date: '', title: '', meals: '', activities: [] },
+    ]);
+    markChanged();
+  };
+
+  const removeDay = (index: number) => {
+    const newItinerary = dailyItinerary.filter((_, i) => i !== index);
+    // Renumber days
+    newItinerary.forEach((day: any, i: number) => {
+      day.day = i + 1;
+    });
+    setDailyItinerary(newItinerary);
+    markChanged();
+  };
+
+  const updateDay = (index: number, field: string, value: string) => {
+    const newItinerary = [...dailyItinerary];
+    newItinerary[index] = { ...newItinerary[index], [field]: value };
+    setDailyItinerary(newItinerary);
+    markChanged();
+  };
+
+  const addActivity = (dayIndex: number) => {
+    const newItinerary = [...dailyItinerary];
+    if (!newItinerary[dayIndex].activities) {
+      newItinerary[dayIndex].activities = [];
+    }
+    newItinerary[dayIndex].activities.push({ icon: '', description: '' });
+    setDailyItinerary(newItinerary);
+    markChanged();
+  };
+
+  const removeActivity = (dayIndex: number, activityIndex: number) => {
+    const newItinerary = [...dailyItinerary];
+    newItinerary[dayIndex].activities.splice(activityIndex, 1);
+    setDailyItinerary(newItinerary);
+    markChanged();
+  };
+
+  const updateActivity = (dayIndex: number, activityIndex: number, field: string, value: string) => {
+    const newItinerary = [...dailyItinerary];
+    newItinerary[dayIndex].activities[activityIndex] = {
+      ...newItinerary[dayIndex].activities[activityIndex],
+      [field]: value,
+    };
+    setDailyItinerary(newItinerary);
+    markChanged();
+  };
+
+  // Accommodation functions
+  const addAccommodation = () => {
+    setAccommodations([...accommodations, { name: '', description: '', photo: '', dates: '' }]);
+    markChanged();
+  };
+
+  const removeAccommodation = (index: number) => {
+    setAccommodations(accommodations.filter((_, i) => i !== index));
+    markChanged();
+  };
+
+  const updateAccommodation = (index: number, field: string, value: string) => {
+    const newAccommodations = [...accommodations];
+    newAccommodations[index] = { ...newAccommodations[index], [field]: value };
+    setAccommodations(newAccommodations);
+    markChanged();
+  };
+
+  // FAQ functions
+  const addFaq = () => {
+    setFaq([...faq, { question: '', answer: '' }]);
+    markChanged();
+  };
+
+  const removeFaq = (index: number) => {
+    setFaq(faq.filter((_, i) => i !== index));
+    markChanged();
+  };
+
+  const updateFaq = (index: number, field: string, value: string) => {
+    const newFaq = [...faq];
+    newFaq[index] = { ...newFaq[index], [field]: value };
+    setFaq(newFaq);
+    markChanged();
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setSaveStatus('saving');
+
+    const updatedData = {
+      ...trip.data,
+      hero: {
+        title: heroTitle,
+        subtitle: heroSubtitle,
+      },
+      gallery,
+      overview: {
+        title: overviewTitle,
+        paragraphs,
+        tags,
+        image: {
+          src: overviewImageSrc,
+          alt: overviewImageAlt,
+        },
+      },
+      itinerary: dailyItinerary,
+      accommodations,
+      pricing: {
+        title: pricingTitle,
+        description: pricingDescription,
+        prices,
+      },
+      faq,
+    };
+
+    try {
+      const response = await fetch(`/api/trips/${trip.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          featured,
+          metaTitle,
+          metaDescription,
+          metaOgImage,
+          data: updatedData,
+        }),
+      });
+
+      if (response.ok) {
+        setSaveStatus('saved');
+        setMessage('Changes saved');
+        setHasUnsavedChanges(false);
+        setTimeout(() => {
+          if (saveStatus === 'saved') {
+            setSaveStatus('idle');
+          }
+        }, 3000);
+        router.refresh();
+      } else {
+        const error = await response.json();
+        setSaveStatus('error');
+        setMessage('Error: ' + (error.error || 'Failed to save'));
+      }
+    } catch (error) {
+      setSaveStatus('error');
+      setMessage('Error: ' + (error as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Warn before leaving with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-5xl mx-auto">
+        <div className="mb-8">
+          <Link
+            href="/admin/trips"
+            className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4"
+          >
+            <Icon icon="mdi:arrow-left" className="w-5 h-5 mr-2" />
+            Back to Trips
+          </Link>
+          <h1 className="text-4xl font-bold mb-2">Edit Trip</h1>
+          <p className="text-gray-600">{trip.slug}</p>
+        </div>
+
+        {/* Save Status Indicator */}
+        {(saveStatus === 'saved' || saveStatus === 'error') && (
+          <div
+            className={`mb-6 p-4 rounded-lg ${
+              saveStatus === 'saved' ? 'bg-green-100' : 'bg-red-100'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              {saveStatus === 'saved' ? (
+                <>
+                  <Icon icon="mdi:check-circle" className="w-5 h-5 text-green-600" />
+                  <span className="text-green-600 font-medium">{message}</span>
+                </>
+              ) : (
+                <>
+                  <Icon icon="mdi:alert-circle" className="w-5 h-5 text-red-600" />
+                  <span className="text-red-600 font-medium">{message}</span>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        <form
+          id="itinerary-form"
+          onSubmit={handleSubmit}
+          onChange={markChanged}
+          className="bg-white rounded-lg shadow-md p-8 space-y-8 mb-24"
+        >
+          {/* Featured Toggle */}
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="featured"
+              checked={featured}
+              onChange={(e) => {
+                setFeatured(e.target.checked);
+                markChanged();
+              }}
+              className="w-4 h-4 text-blue-600 rounded"
+            />
+            <label htmlFor="featured" className="text-sm font-medium text-gray-700">
+              Featured Trip
+            </label>
+          </div>
+
+          {/* Meta Section */}
+          <div className="border-t pt-6">
+            <h2 className="text-2xl font-bold mb-4">Meta Information</h2>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="meta-title" className="block text-sm font-medium mb-1 text-gray-700">
+                  Meta Title
+                </label>
+                <input
+                  id="meta-title"
+                  value={metaTitle}
+                  onChange={(e) => setMetaTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  type="text"
+                />
+              </div>
+              <div>
+                <label htmlFor="meta-description" className="block text-sm font-medium mb-1 text-gray-700">
+                  Meta Description
+                </label>
+                <textarea
+                  id="meta-description"
+                  value={metaDescription}
+                  onChange={(e) => setMetaDescription(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label htmlFor="meta-og-image" className="block text-sm font-medium mb-1 text-gray-700">
+                  OG Image Path
+                </label>
+                <input
+                  id="meta-og-image"
+                  value={metaOgImage}
+                  onChange={(e) => setMetaOgImage(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  type="text"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Hero Section */}
+          <div className="border-t pt-6">
+            <h2 className="text-2xl font-bold mb-4">Hero Section</h2>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="hero-title" className="block text-sm font-medium mb-1 text-gray-700">
+                  Title
+                </label>
+                <input
+                  id="hero-title"
+                  value={heroTitle}
+                  onChange={(e) => setHeroTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  type="text"
+                />
+              </div>
+              <div>
+                <label htmlFor="hero-subtitle" className="block text-sm font-medium mb-1 text-gray-700">
+                  Subtitle
+                </label>
+                <input
+                  id="hero-subtitle"
+                  value={heroSubtitle}
+                  onChange={(e) => setHeroSubtitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  type="text"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Gallery Section */}
+          <div className="border-t pt-6">
+            <h2 className="text-2xl font-bold mb-4">Gallery Images</h2>
+            <div className="space-y-4">
+              {gallery.map((image: any, i: number) => (
+                <ArrayItem key={i} onDelete={() => removeGalleryImage(i)}>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700">
+                        Image {i + 1} - Source Path
+                      </label>
+                      <input
+                        value={image.src}
+                        onChange={(e) => updateGalleryImage(i, 'src', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        type="text"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700">Alt Text</label>
+                      <input
+                        value={image.alt}
+                        onChange={(e) => updateGalleryImage(i, 'alt', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        type="text"
+                      />
+                    </div>
+                  </div>
+                </ArrayItem>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={addGalleryImage}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2"
+            >
+              <Icon icon="mdi:plus" className="w-5 h-5" />
+              Add Image
+            </button>
+          </div>
+
+          {/* Overview Section */}
+          <div className="border-t pt-6">
+            <h2 className="text-2xl font-bold mb-4">Overview</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-700">Overview Title</label>
+                <input
+                  value={overviewTitle}
+                  onChange={(e) => setOverviewTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  type="text"
+                />
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Paragraphs</h3>
+                <div className="space-y-4">
+                  {paragraphs.map((paragraph: string, i: number) => (
+                    <ArrayItem key={i} onDelete={() => removeParagraph(i)}>
+                      <div>
+                        <label className="block text-sm font-medium mb-1 text-gray-700">
+                          Paragraph {i + 1}
+                        </label>
+                        <textarea
+                          value={paragraph}
+                          onChange={(e) => updateParagraph(i, e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          rows={6}
+                        />
+                      </div>
+                    </ArrayItem>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={addParagraph}
+                  className="mt-4 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 flex items-center gap-1"
+                >
+                  <Icon icon="mdi:plus" className="w-4 h-4" />
+                  Add Paragraph
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Overview Tags */}
+          <div>
+            <h3 className="text-xl font-semibold mb-3">Tags</h3>
+            <div className="space-y-4">
+              {tags.map((tag: any, i: number) => (
+                <ArrayItem key={i} onDelete={() => removeTag(i)}>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700">Icon</label>
+                      <input
+                        value={tag.icon}
+                        onChange={(e) => updateTag(i, 'icon', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        type="text"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700">Label</label>
+                      <input
+                        value={tag.label}
+                        onChange={(e) => updateTag(i, 'label', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        type="text"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700">Value</label>
+                      <input
+                        value={tag.value}
+                        onChange={(e) => updateTag(i, 'value', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        type="text"
+                      />
+                    </div>
+                  </div>
+                </ArrayItem>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={addTag}
+              className="mt-4 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 flex items-center gap-1"
+            >
+              <Icon icon="mdi:plus" className="w-4 h-4" />
+              Add Tag
+            </button>
+          </div>
+
+          {/* Overview Image */}
+          <div>
+            <h3 className="text-xl font-semibold mb-3">Overview Image</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-700">Image Source</label>
+                <input
+                  value={overviewImageSrc}
+                  onChange={(e) => setOverviewImageSrc(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  type="text"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-700">Image Alt Text</label>
+                <input
+                  value={overviewImageAlt}
+                  onChange={(e) => setOverviewImageAlt(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  type="text"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Daily Itinerary Section */}
+          <div className="border-t pt-6">
+            <h2 className="text-2xl font-bold mb-4">Daily Itinerary</h2>
+            <div className="space-y-6">
+              {dailyItinerary.map((day: any, dayIndex: number) => (
+                <div key={dayIndex} className="bg-blue-50 p-6 rounded-lg border-2 border-blue-200">
+                  <div className="flex justify-between items-start mb-4">
+                    <h3 className="text-xl font-bold text-blue-900">Day {day.day}</h3>
+                    <button
+                      type="button"
+                      onClick={() => removeDay(dayIndex)}
+                      className="p-2 rounded hover:bg-red-50 transition-colors"
+                      title="Delete Day"
+                    >
+                      <Icon icon="mdi:delete" className="w-5 h-5 text-red-600" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700">Date</label>
+                      <input
+                        value={day.date || ''}
+                        onChange={(e) => updateDay(dayIndex, 'date', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        type="text"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700">Title</label>
+                      <input
+                        value={day.title || ''}
+                        onChange={(e) => updateDay(dayIndex, 'title', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        type="text"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700">Meals</label>
+                      <input
+                        value={day.meals || ''}
+                        onChange={(e) => updateDay(dayIndex, 'meals', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        type="text"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700">
+                        Accommodation (optional)
+                      </label>
+                      <input
+                        value={day.accommodation || ''}
+                        onChange={(e) => updateDay(dayIndex, 'accommodation', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        type="text"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Activities */}
+                  <div className="mt-4">
+                    <h4 className="text-lg font-semibold mb-3">Activities</h4>
+                    <div className="space-y-3">
+                      {day.activities?.map((activity: any, actIndex: number) => (
+                        <div key={actIndex} className="bg-white p-4 rounded border border-gray-200 flex gap-3">
+                          <div className="flex-1 grid grid-cols-4 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium mb-1 text-gray-700">Icon</label>
+                              <input
+                                value={activity.icon || ''}
+                                onChange={(e) => updateActivity(dayIndex, actIndex, 'icon', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                type="text"
+                              />
+                            </div>
+                            <div className="col-span-3">
+                              <label className="block text-xs font-medium mb-1 text-gray-700">
+                                Description{' '}
+                                <span className="text-gray-500 font-normal">
+                                  (Markdown: **bold**, *italic*, [link](url))
+                                </span>
+                              </label>
+                              <textarea
+                                value={activity.description || ''}
+                                onChange={(e) =>
+                                  updateActivity(dayIndex, actIndex, 'description', e.target.value)
+                                }
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                rows={2}
+                              />
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeActivity(dayIndex, actIndex)}
+                            className="p-2 h-fit rounded hover:bg-red-50 transition-colors"
+                            title="Delete"
+                          >
+                            <Icon icon="mdi:delete" className="w-4 h-4 text-red-600" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => addActivity(dayIndex)}
+                      className="mt-3 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 flex items-center gap-1"
+                    >
+                      <Icon icon="mdi:plus" className="w-4 h-4" />
+                      Add Activity
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={addDay}
+              className="mt-6 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2"
+            >
+              <Icon icon="mdi:plus" className="w-5 h-5" />
+              Add Day
+            </button>
+          </div>
+
+          {/* Accommodations Section */}
+          <div className="border-t pt-6">
+            <h2 className="text-2xl font-bold mb-4">Accommodations</h2>
+            <div className="space-y-4">
+              {accommodations.map((accommodation: any, i: number) => (
+                <ArrayItem key={i} onDelete={() => removeAccommodation(i)}>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700">Name</label>
+                      <input
+                        value={accommodation.name || ''}
+                        onChange={(e) => updateAccommodation(i, 'name', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        type="text"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700">Description</label>
+                      <textarea
+                        value={accommodation.description || ''}
+                        onChange={(e) => updateAccommodation(i, 'description', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        rows={3}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700">Photo Path</label>
+                      <input
+                        value={accommodation.photo || ''}
+                        onChange={(e) => updateAccommodation(i, 'photo', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        type="text"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700">Dates (optional)</label>
+                      <input
+                        value={accommodation.dates || ''}
+                        onChange={(e) => updateAccommodation(i, 'dates', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        type="text"
+                      />
+                    </div>
+                  </div>
+                </ArrayItem>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={addAccommodation}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2"
+            >
+              <Icon icon="mdi:plus" className="w-5 h-5" />
+              Add Accommodation
+            </button>
+          </div>
+
+          {/* Pricing Section */}
+          <div className="border-t pt-6">
+            <h2 className="text-2xl font-bold mb-4">Pricing</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-700">Title</label>
+                <input
+                  value={pricingTitle}
+                  onChange={(e) => setPricingTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  type="text"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-700">Description</label>
+                <textarea
+                  value={pricingDescription}
+                  onChange={(e) => setPricingDescription(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <h3 className="text-xl font-semibold mb-3">Price Table</h3>
+                <div className="space-y-4">
+                  {prices.map((price: any, i: number) => (
+                    <ArrayItem key={i} onDelete={() => removePrice(i)}>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium mb-1 text-gray-700">Package</label>
+                          <input
+                            value={price.package || ''}
+                            onChange={(e) => updatePrice(i, 'package', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            type="text"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1 text-gray-700">Early Booking</label>
+                          <input
+                            value={price.early_booking || ''}
+                            onChange={(e) => updatePrice(i, 'early_booking', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            type="text"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1 text-gray-700">Standard</label>
+                          <input
+                            value={price.standard || ''}
+                            onChange={(e) => updatePrice(i, 'standard', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            type="text"
+                          />
+                        </div>
+                      </div>
+                    </ArrayItem>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={addPrice}
+                  className="mt-4 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 flex items-center gap-1"
+                >
+                  <Icon icon="mdi:plus" className="w-4 h-4" />
+                  Add Price Row
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* FAQ Section */}
+          <div className="border-t pt-6">
+            <h2 className="text-2xl font-bold mb-4">FAQ</h2>
+            <div className="space-y-4">
+              {faq.map((faqItem: any, i: number) => (
+                <ArrayItem key={i} onDelete={() => removeFaq(i)}>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700">Question</label>
+                      <input
+                        value={faqItem.question || ''}
+                        onChange={(e) => updateFaq(i, 'question', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        type="text"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700">
+                        Answer (supports Markdown)
+                      </label>
+                      <textarea
+                        value={faqItem.answer || ''}
+                        onChange={(e) => updateFaq(i, 'answer', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        rows={5}
+                      />
+                    </div>
+                  </div>
+                </ArrayItem>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={addFaq}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2"
+            >
+              <Icon icon="mdi:plus" className="w-5 h-5" />
+              Add FAQ Item
+            </button>
+          </div>
+
+          {/* Note about complex sections */}
+          <div className="border-t pt-6">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Note:</strong> Experiences section has complex nested structures. For now, edit
+                that section directly in the JSON. This form focuses on meta information, overview, daily
+                itinerary, accommodations, pricing, and FAQ.
+              </p>
+            </div>
+          </div>
+        </form>
+
+        {/* Sticky Save Button */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4 z-10">
+          <div className="max-w-6xl mx-auto flex gap-4 items-center">
+            {hasUnsavedChanges && !saving && (
+              <div className="flex items-center gap-2 text-amber-600">
+                <Icon icon="mdi:alert-circle" className="w-5 h-5" />
+                <span className="text-sm font-medium">Unsaved changes</span>
+              </div>
+            )}
+            <Button type="submit" form="itinerary-form" className="flex-1" disabled={saving}>
+              {saving ? (
+                <>
+                  <Icon icon="mdi:loading" className="w-5 h-5 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Icon icon="mdi:content-save" className="w-5 h-5 mr-2" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.push('/admin/trips')}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

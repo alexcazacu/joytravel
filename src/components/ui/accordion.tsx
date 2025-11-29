@@ -80,11 +80,15 @@ type AccordionItemProps = {
   className?: string;
 };
 
+const AccordionItemContext = React.createContext<string>('');
+
 export function AccordionItem({ value, children, className }: AccordionItemProps) {
   return (
-    <div className={cn('border-b border-border', className)} data-value={value}>
-      {children}
-    </div>
+    <AccordionItemContext.Provider value={value}>
+      <div className={cn('border-b border-border', className)} data-value={value}>
+        {children}
+      </div>
+    </AccordionItemContext.Provider>
   );
 }
 
@@ -95,9 +99,7 @@ type AccordionTriggerProps = {
 
 export function AccordionTrigger({ children, className }: AccordionTriggerProps) {
   const { value: accordionValue, onValueChange } = useAccordion();
-  const itemElement = React.useRef<HTMLButtonElement>(null);
-
-  const itemValue = itemElement.current?.closest('[data-value]')?.getAttribute('data-value') || '';
+  const itemValue = React.useContext(AccordionItemContext);
 
   const isOpen = Array.isArray(accordionValue)
     ? accordionValue.includes(itemValue)
@@ -105,7 +107,6 @@ export function AccordionTrigger({ children, className }: AccordionTriggerProps)
 
   return (
     <button
-      ref={itemElement}
       type="button"
       className={cn(
         'flex w-full items-center justify-between py-4 font-medium transition-all hover:underline text-left',
@@ -129,9 +130,7 @@ type AccordionContentProps = {
 
 export function AccordionContent({ children, className }: AccordionContentProps) {
   const { value: accordionValue } = useAccordion();
-  const itemElement = React.useRef<HTMLDivElement>(null);
-
-  const itemValue = itemElement.current?.closest('[data-value]')?.getAttribute('data-value') || '';
+  const itemValue = React.useContext(AccordionItemContext);
 
   const isOpen = Array.isArray(accordionValue)
     ? accordionValue.includes(itemValue)
@@ -140,7 +139,7 @@ export function AccordionContent({ children, className }: AccordionContentProps)
   if (!isOpen) return null;
 
   return (
-    <div ref={itemElement} className={cn('pb-4 pt-0', className)}>
+    <div className={cn('pb-4 pt-0', className)}>
       {children}
     </div>
   );
