@@ -4,12 +4,29 @@ import { useEffect, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { ItinerariesSection } from '@/components/ItinerariesSection';
+
+type Trip = {
+  id: string;
+  slug: string;
+  title: string;
+  featured: boolean;
+  summary: string | null;
+  metaTitle: string | null;
+  metaDescription: string | null;
+  metaOgImage: string | null;
+  data: any;
+  createdAt: string | number | Date;
+  updatedAt: string | number | Date;
+};
 
 export default function LandingPage() {
   const [servicesVisible, setServicesVisible] = useState(false);
   const [sriLankaVisible, setSriLankaVisible] = useState(false);
   const [benefitsVisible, setBenefitsVisible] = useState(false);
   const [reviewsVisible, setReviewsVisible] = useState(false);
+  const [featuredTrips, setFeaturedTrips] = useState<Trip[]>([]);
+  const [tripsLoading, setTripsLoading] = useState(true);
 
   useEffect(() => {
     const observerOptions = {
@@ -31,6 +48,23 @@ export default function LandingPage() {
     document.querySelectorAll('[id$="-section"]').forEach((el) => observer.observe(el));
 
     return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    async function loadFeaturedTrips() {
+      try {
+        const res = await fetch('/api/trips/featured');
+        if (res.ok) {
+          const data = await res.json();
+          setFeaturedTrips(data);
+        }
+      } catch (error) {
+        console.error('Failed to load featured trips', error);
+      } finally {
+        setTripsLoading(false);
+      }
+    }
+    loadFeaturedTrips();
   }, []);
 
   const benefits = [
@@ -166,6 +200,26 @@ export default function LandingPage() {
           </div>
         </div>
       </div>
+
+      {/* Featured Itineraries */}
+      {!tripsLoading && featuredTrips.length > 0 && (
+        <ItinerariesSection
+          itineraries={featuredTrips.map((trip) => ({
+            title: trip.data?.hero?.title || trip.title,
+            subtitle: trip.data?.hero?.subtitle || '',
+            description: trip.summary || trip.data?.overview?.paragraphs?.[0] || '',
+            image: trip.data?.gallery?.[0]?.src || trip.metaOgImage || '/placeholder.jpg',
+            duration: trip.data?.hero?.subtitle?.split('•')?.[2]?.trim() || '11 zile',
+            dates: trip.data?.hero?.subtitle?.split('•')?.[0]?.trim() || '',
+            price: '',
+            destinations: trip.data?.overview?.tags?.map((t: any) => t.value) || [],
+            highlights: trip.data?.experiences?.categories?.[0]?.items?.slice(0, 3) || [],
+            link: `/trips/${trip.slug}`,
+          }))}
+          title="Călătorii personalizate pentru familia ta"
+          description="Pentru că fiecare familie are propriul ritm, propriile bucurii și felul ei unic de a descoperi lumea."
+        />
+      )}
 
       {/* Sri Lanka Section */}
       <div className="py-20" id="sri-lanka-section">
