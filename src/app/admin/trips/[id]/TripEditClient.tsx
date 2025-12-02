@@ -42,6 +42,7 @@ export default function TripEditClient({ trip }: { trip: TripData }) {
   const [overviewImageAlt, setOverviewImageAlt] = useState(trip.data?.overview?.image?.alt || '');
   const [pricingTitle, setPricingTitle] = useState(trip.data?.pricing?.title || '');
   const [pricingDescription, setPricingDescription] = useState(trip.data?.pricing?.description || '');
+  const [tripStartDate, setTripStartDate] = useState(trip.data?.tripStartDate || '');
 
   // Arrays
   const [gallery, setGallery] = useState(trip.data?.gallery || []);
@@ -129,21 +130,31 @@ export default function TripEditClient({ trip }: { trip: TripData }) {
     markChanged();
   };
 
+  // Calculate date for a specific day
+  const calculateDate = (dayNumber: number) => {
+    if (!tripStartDate) return '';
+    const startDate = new Date(tripStartDate);
+    const targetDate = new Date(startDate);
+    targetDate.setDate(startDate.getDate() + dayNumber - 1);
+    return targetDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  };
+
   // Daily itinerary functions
   const addDay = () => {
     const newDay = dailyItinerary.length + 1;
     setDailyItinerary([
       ...dailyItinerary,
-      { day: newDay, date: '', title: '', meals: '', activities: [] },
+      { day: newDay, date: calculateDate(newDay), title: '', meals: '', activities: [] },
     ]);
     markChanged();
   };
 
   const removeDay = (index: number) => {
-    const newItinerary = dailyItinerary.filter((_, i) => i !== index);
-    // Renumber days
+    const newItinerary = dailyItinerary.filter((_: any, i: number) => i !== index);
+    // Renumber days and recalculate dates
     newItinerary.forEach((day: any, i: number) => {
       day.day = i + 1;
+      day.date = calculateDate(i + 1);
     });
     setDailyItinerary(newItinerary);
     markChanged();
@@ -151,9 +162,12 @@ export default function TripEditClient({ trip }: { trip: TripData }) {
 
   const updateDay = (index: number, field: string, value: string) => {
     const newItinerary = [...dailyItinerary];
-    newItinerary[index] = { ...newItinerary[index], [field]: value };
-    setDailyItinerary(newItinerary);
-    markChanged();
+    // Don't allow manual date editing since it's auto-calculated
+    if (field !== 'date') {
+      newItinerary[index] = { ...newItinerary[index], [field]: value };
+      setDailyItinerary(newItinerary);
+      markChanged();
+    }
   };
 
   const addActivity = (dayIndex: number) => {
@@ -185,7 +199,7 @@ export default function TripEditClient({ trip }: { trip: TripData }) {
 
   // Accommodation functions
   const addAccommodation = () => {
-    setAccommodations([...accommodations, { name: '', description: '', photo: '', dates: '' }]);
+    setAccommodations([...accommodations, { name: '', description: '', photo: '', dates: '', link: '' }]);
     markChanged();
   };
 
@@ -241,6 +255,7 @@ export default function TripEditClient({ trip }: { trip: TripData }) {
           alt: overviewImageAlt,
         },
       },
+      tripStartDate,
       itinerary: dailyItinerary,
       accommodations,
       pricing: {
@@ -778,14 +793,61 @@ export default function TripEditClient({ trip }: { trip: TripData }) {
               </button>
             </div>
 
+            {/* Trip Start Date */}
+            <div className="mt-6 p-4 bg-gradient-to-br from-blue-50 to-teal-50 border-2 border-blue-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <Icon icon="mdi:calendar-start" className="w-6 h-6 text-blue-600 mt-1" />
+                <div className="flex-1">
+                  <label className={labelClass}>
+                    Trip Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={tripStartDate}
+                    onChange={(e) => {
+                      const newStartDate = e.target.value;
+                      setTripStartDate(newStartDate);
+                      // Recalculate all dates when start date changes
+                      if (newStartDate && dailyItinerary.length > 0) {
+                        const startDate = new Date(newStartDate);
+                        const updated = dailyItinerary.map((day: any, index: number) => {
+                          const targetDate = new Date(startDate);
+                          targetDate.setDate(startDate.getDate() + index);
+                          return {
+                            ...day,
+                            date: targetDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                          };
+                        });
+                        setDailyItinerary(updated);
+                      }
+                      markChanged();
+                    }}
+                    className={inputClass}
+                  />
+                  <p className="text-xs text-blue-700 mt-2 flex items-center gap-1">
+                    <Icon icon="mdi:information" className="w-4 h-4" />
+                    All daily dates will be automatically calculated from this start date
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="mt-6 space-y-6">
               {dailyItinerary.map((day: any, dayIndex: number) => (
                 <div key={dayIndex} className="bg-gradient-to-br from-blue-50 to-teal-50 p-6 rounded-lg border-2 border-blue-200">
                   <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-xl font-bold text-blue-900 flex items-center gap-2">
-                      <Icon icon="mdi:numeric-{day.day}-circle" className="w-6 h-6" />
-                      Day {day.day}
-                    </h3>
+                    <div>
+                      <h3 className="text-xl font-bold text-blue-900 flex items-center gap-2">
+                        <Icon icon="mdi:numeric-{day.day}-circle" className="w-6 h-6" />
+                        Day {day.day}
+                      </h3>
+                      {day.accommodation && (
+                        <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-white/80 border border-blue-300 rounded-full text-sm">
+                          <Icon icon="mdi:bed" className="w-4 h-4 text-blue-700" />
+                          <span className="font-medium text-blue-900">{day.accommodation}</span>
+                        </div>
+                      )}
+                    </div>
                     <button
                       type="button"
                       onClick={() => removeDay(dayIndex)}
@@ -798,12 +860,15 @@ export default function TripEditClient({ trip }: { trip: TripData }) {
 
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
-                      <label className={labelClass}>Date</label>
+                      <label className={labelClass}>
+                        Date
+                        <span className="ml-2 text-xs text-gray-500 font-normal">(auto-calculated)</span>
+                      </label>
                       <input
-                        value={day.date || ''}
-                        onChange={(e) => updateDay(dayIndex, 'date', e.target.value)}
-                        className={inputClass}
-                        placeholder="April 4, 2026"
+                        value={day.date || calculateDate(day.day)}
+                        readOnly
+                        className={`${inputClass} bg-gray-50 cursor-not-allowed`}
+                        placeholder="Set trip start date first"
                       />
                     </div>
                     <div>
@@ -828,13 +893,33 @@ export default function TripEditClient({ trip }: { trip: TripData }) {
                       />
                     </div>
                     <div>
-                      <label className={labelClass}>Accommodation (optional)</label>
-                      <input
+                      <label className={labelClass}>
+                        Accommodation
+                        {accommodations.length === 0 && (
+                          <span className="ml-2 text-xs text-amber-600 font-normal">
+                            (Add accommodations in the Accommodations tab first)
+                          </span>
+                        )}
+                      </label>
+                      <select
                         value={day.accommodation || ''}
                         onChange={(e) => updateDay(dayIndex, 'accommodation', e.target.value)}
                         className={inputClass}
-                        placeholder="Hotel name"
-                      />
+                        disabled={accommodations.length === 0}
+                      >
+                        <option value="">-- Select Accommodation --</option>
+                        {accommodations.map((acc: any, accIndex: number) => (
+                          <option key={accIndex} value={acc.name}>
+                            {acc.name}
+                          </option>
+                        ))}
+                      </select>
+                      {accommodations.length > 0 && day.accommodation && (
+                        <p className="text-xs text-green-700 mt-1 flex items-center gap-1">
+                          <Icon icon="mdi:check-circle" className="w-3.5 h-3.5" />
+                          Linked to accommodation
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -953,14 +1038,40 @@ export default function TripEditClient({ trip }: { trip: TripData }) {
                         placeholder="Brief description of the accommodation"
                       />
                     </div>
-                    <div>
-                      <label className={labelClass}>Photo URL</label>
-                      <input
-                        value={accommodation.photo || ''}
-                        onChange={(e) => updateAccommodation(i, 'photo', e.target.value)}
-                        className={inputClass}
-                        placeholder="/images/hotels/1.jpg"
-                      />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={labelClass}>Photo URL</label>
+                        <input
+                          value={accommodation.photo || ''}
+                          onChange={(e) => updateAccommodation(i, 'photo', e.target.value)}
+                          className={inputClass}
+                          placeholder="/images/hotels/1.jpg"
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClass}>
+                          <Icon icon="mdi:link-variant" className="w-4 h-4 inline mr-1" />
+                          Website Link
+                        </label>
+                        <input
+                          type="url"
+                          value={accommodation.link || ''}
+                          onChange={(e) => updateAccommodation(i, 'link', e.target.value)}
+                          className={inputClass}
+                          placeholder="https://hotel-paradise.com"
+                        />
+                        {accommodation.link && (
+                          <a
+                            href={accommodation.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-[#037280] hover:underline mt-1 inline-flex items-center gap-1"
+                          >
+                            <Icon icon="mdi:open-in-new" className="w-3.5 h-3.5" />
+                            Preview link
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </ArrayItem>

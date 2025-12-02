@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Icon } from '@iconify/react';
+import RichTextEditor from '@/components/editor/RichTextEditor';
 
 type BlogPostData = {
   id: string;
@@ -243,7 +244,7 @@ export default function BlogEditClient({ post }: { post: BlogPostData }) {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">Post Content</h2>
-                <p className="text-sm text-gray-500">Write your blog post content using Markdown</p>
+                <p className="text-sm text-gray-500">Write your blog post content with the rich text editor</p>
               </div>
             </div>
 
@@ -279,20 +280,16 @@ export default function BlogEditClient({ post }: { post: BlogPostData }) {
             <div>
               <label className={labelClass}>
                 <Icon icon="mdi:file-document" className="w-4 h-4 inline mr-1" />
-                Content (Markdown)
+                Content
               </label>
-              <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                className={`${inputClass} font-mono text-sm`}
-                rows={20}
-                placeholder="Write your post content here using **Markdown**..."
-                required
+              <RichTextEditor
+                content={content}
+                onChange={(newContent) => {
+                  setContent(newContent);
+                  markChanged();
+                }}
+                placeholder="Start writing your blog post..."
               />
-              <p className="text-xs text-gray-500 mt-2">
-                <Icon icon="mdi:information" className="w-3.5 h-3.5 inline mr-1" />
-                Supports Markdown: **bold**, *italic*, [links](url), images, etc.
-              </p>
             </div>
           </div>
         )}
