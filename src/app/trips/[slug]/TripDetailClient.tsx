@@ -172,31 +172,112 @@ export default function TripDetailClient({ trip }: { trip: TripData }) {
 
       {/* Itinerary */}
       {itinerary.length > 0 && (
-        <section className="py-12">
+        <section className="py-16 bg-gray-50">
           <div className="container mx-auto px-4">
-            <div className="max-w-6xl mx-auto space-y-8">
-              {itinerary.map((item: any, idx: number) => (
-                <div key={idx} className="border-b pb-6">
-                  <h2 className="text-lg font-bold mb-4">
-                    Ziua {item.day}: {item.title}
-                  </h2>
-                  <div className="space-y-2">
-                    {item.activities?.map((activity: any, actIdx: number) => (
-                      <div key={actIdx} className="flex py-1 gap-3 items-start">
-                        {activity.icon && (
-                          <Icon
-                            icon={activity.icon}
-                            className="h-5 w-5 text-[#037280] shrink-0 mt-1"
-                          />
+            <div className="max-w-5xl mx-auto">
+              <h2 className="text-3xl font-bold text-center mb-12">Day by Day Itinerary</h2>
+
+              <div className="space-y-8">
+                {itinerary.map((item: any, idx: number) => (
+                  <div key={idx} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                    {/* Day Header */}
+                    <div className="bg-[#037280] px-6 py-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <span className="flex items-center justify-center w-10 h-10 rounded-full bg-white/20 text-white font-bold">
+                            {item.day}
+                          </span>
+                          <div>
+                            <h3 className="text-xl font-bold text-white">{item.title}</h3>
+                            {item.date && (
+                              <p className="text-sm text-white/80">{item.date}</p>
+                            )}
+                          </div>
+                        </div>
+                        {item.accommodation && (
+                          <div className="flex items-center gap-2 text-sm bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
+                            <Icon icon="mdi:bed" className="w-4 h-4 text-white" />
+                            <span className="text-white font-medium">{item.accommodation}</span>
+                          </div>
                         )}
-                        <div className="text-md markdown-content">
-                          <ReactMarkdown>{activity.description}</ReactMarkdown>
+                      </div>
+                    </div>
+
+                    {/* Activities */}
+                    <div className="p-6">
+                      {item.activities && item.activities.length > 0 ? (
+                        <div className="space-y-4">
+                          {item.activities.map((activity: any, actIdx: number) => (
+                            <div key={actIdx} className="flex gap-4 items-start p-4 bg-gray-50 rounded-lg border border-gray-100">
+                              {activity.icon && (
+                                <Icon
+                                  icon={activity.icon}
+                                  className="w-6 h-6 text-[#037280] flex-shrink-0 mt-0.5"
+                                />
+                              )}
+                              <div
+                                className="flex-1 text-gray-700 markdown-content"
+                                dangerouslySetInnerHTML={{ __html: activity.description || '' }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 text-center py-4">No activities scheduled</p>
+                      )}
+                    </div>
+
+                    {/* Photos */}
+                    {item.photos && item.photos.length > 0 && (
+                      <div className="px-6 pb-6">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {item.photos.map((photo: any, photoIdx: number) => (
+                            <div key={photoIdx} className="relative aspect-square overflow-hidden rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
+                              <img
+                                src={photo.src}
+                                alt={photo.alt || `Photo ${photoIdx + 1}`}
+                                className="absolute inset-0 w-full h-full object-cover"
+                              />
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    ))}
+                    )}
+
+                    {/* Accommodation */}
+                    {item.accommodation && (
+                      <div className="px-6 pb-6">
+                        <div className="flex items-center gap-2 text-sm text-gray-600 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+                          <Icon icon="mdi:bed" className="w-5 h-5 text-amber-700" />
+                          <span className="font-medium">Accommodation:</span>
+                          <span>{item.accommodation}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Meals */}
+                    {(item.meals && (typeof item.meals === 'string' || item.meals.breakfast || item.meals.lunch || item.meals.dinner)) && (
+                      <div className="px-6 pb-6">
+                        <div className="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+                          <Icon icon="mdi:food" className="w-5 h-5 text-blue-700" />
+                          <span className="font-medium">Meals:</span>
+                          <span>
+                            {typeof item.meals === 'string'
+                              ? item.meals
+                              : [
+                                  item.meals.breakfast && 'Breakfast',
+                                  item.meals.lunch && 'Lunch',
+                                  item.meals.dinner && 'Dinner'
+                                ].filter(Boolean).join(', ')
+                            }
+                            {item.meals.notes && ` (${item.meals.notes})`}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -210,35 +291,48 @@ export default function TripDetailClient({ trip }: { trip: TripData }) {
             <div className="relative">
               <div className="overflow-hidden" ref={emblaRefAccommodations}>
                 <div className="flex">
-                  {accommodations.map((accommodation: any, i: number) => (
-                    <div
-                      key={i}
-                      className="flex-[0_0_100%] min-w-0 md:flex-[0_0_50%] lg:flex-[0_0_33.333%] p-4"
-                    >
-                      <div className="h-full flex flex-col rounded-lg border border-border bg-card overflow-hidden">
-                        <div className="flex-grow flex flex-col p-0">
-                          <img
-                            src={accommodation.photo}
-                            alt={accommodation.name}
-                            className="w-full h-56 object-cover"
-                          />
-                          <div className="p-4 flex flex-col flex-grow">
-                            <h3 className="text-xl font-semibold mb-2">
-                              {accommodation.name}
-                            </h3>
-                            <p className="text-muted-foreground mb-4 flex-grow">
-                              {accommodation.description}
-                            </p>
-                            {accommodation.dates && (
-                              <span className="inline-flex items-center rounded-full bg-[#037280] px-2.5 py-0.5 text-xs font-semibold text-white self-start">
-                                {accommodation.dates}
-                              </span>
-                            )}
+                  {accommodations.map((accommodation: any, i: number) => {
+                    // Calculate number of nights from itinerary
+                    const nights = itinerary.filter((day: any) => day.accommodation === accommodation.name).length;
+
+                    return (
+                      <div
+                        key={i}
+                        className="flex-[0_0_100%] min-w-0 md:flex-[0_0_50%] lg:flex-[0_0_33.333%] p-4"
+                      >
+                        <div className="h-full flex flex-col rounded-lg border border-border bg-card overflow-hidden">
+                          <div className="flex-grow flex flex-col p-0">
+                            <img
+                              src={accommodation.photo}
+                              alt={accommodation.name}
+                              className="w-full h-56 object-cover"
+                            />
+                            <div className="p-4 flex flex-col flex-grow">
+                              <h3 className="text-xl font-semibold mb-2">
+                                {accommodation.name}
+                              </h3>
+                              <p className="text-muted-foreground mb-4 flex-grow">
+                                {accommodation.description}
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {nights > 0 && (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-[#037280] px-2.5 py-0.5 text-xs font-semibold text-white">
+                                    <Icon icon="mdi:weather-night" className="w-3.5 h-3.5" />
+                                    {nights} {nights === 1 ? 'night' : 'nights'}
+                                  </span>
+                                )}
+                                {accommodation.dates && (
+                                  <span className="inline-flex items-center rounded-full bg-gray-600 px-2.5 py-0.5 text-xs font-semibold text-white">
+                                    {accommodation.dates}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
               <div className="flex justify-center mt-4 gap-2">
@@ -341,7 +435,8 @@ export default function TripDetailClient({ trip }: { trip: TripData }) {
 
       <style jsx global>{`
         .markdown-content p {
-          margin: 0.25rem 0;
+          margin: 0.5rem 0;
+          line-height: 1.6;
         }
 
         .markdown-content p:first-child {
@@ -352,20 +447,41 @@ export default function TripDetailClient({ trip }: { trip: TripData }) {
           margin-bottom: 0;
         }
 
+        .markdown-content h1,
+        .markdown-content h2,
+        .markdown-content h3 {
+          font-weight: 700;
+          margin: 1rem 0 0.5rem 0;
+          color: #1f2937;
+        }
+
+        .markdown-content h1 {
+          font-size: 1.5rem;
+        }
+
+        .markdown-content h2 {
+          font-size: 1.25rem;
+        }
+
+        .markdown-content h3 {
+          font-size: 1.125rem;
+        }
+
         .markdown-content ul {
-          margin: 0.5rem 0;
+          margin: 0.75rem 0;
           padding-left: 1.5rem;
           list-style-type: disc;
         }
 
         .markdown-content ol {
-          margin: 0.5rem 0;
+          margin: 0.75rem 0;
           padding-left: 1.5rem;
           list-style-type: decimal;
         }
 
         .markdown-content li {
           margin: 0.25rem 0;
+          line-height: 1.6;
         }
 
         .markdown-content strong {
@@ -389,10 +505,31 @@ export default function TripDetailClient({ trip }: { trip: TripData }) {
 
         .markdown-content code {
           background-color: #f3f4f6;
-          padding: 0.125rem 0.25rem;
+          padding: 0.125rem 0.375rem;
           border-radius: 0.25rem;
           font-size: 0.875em;
           font-family: monospace;
+        }
+
+        .markdown-content blockquote {
+          border-left: 3px solid #037280;
+          padding-left: 1rem;
+          margin: 1rem 0;
+          color: #4b5563;
+          font-style: italic;
+        }
+
+        .markdown-content hr {
+          border: none;
+          border-top: 1px solid #e5e7eb;
+          margin: 1.5rem 0;
+        }
+
+        .markdown-content img {
+          max-width: 100%;
+          height: auto;
+          border-radius: 0.5rem;
+          margin: 1rem 0;
         }
       `}</style>
     </div>

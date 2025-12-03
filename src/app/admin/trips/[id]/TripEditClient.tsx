@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Icon } from '@iconify/react';
 import { Button } from '@/components/ui/button';
 import ArrayItem from '@/components/admin/ArrayItem';
+import RichTextEditor from '@/components/editor/RichTextEditor';
 
 type TripData = {
   id: string;
@@ -951,13 +952,11 @@ export default function TripEditClient({ trip }: { trip: TripData }) {
                             </div>
                             <div className="col-span-3">
                               <label className="block text-xs font-medium mb-1 text-gray-700">
-                                Description <span className="text-gray-500 font-normal">(Markdown supported)</span>
+                                Description
                               </label>
-                              <textarea
-                                value={activity.description || ''}
-                                onChange={(e) => updateActivity(dayIndex, actIndex, 'description', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#037280] text-sm"
-                                rows={2}
+                              <RichTextEditor
+                                content={activity.description || ''}
+                                onChange={(newContent) => updateActivity(dayIndex, actIndex, 'description', newContent)}
                                 placeholder="Activity description"
                               />
                             </div>
@@ -965,6 +964,84 @@ export default function TripEditClient({ trip }: { trip: TripData }) {
                           <button
                             type="button"
                             onClick={() => removeActivity(dayIndex, actIndex)}
+                            className="p-2 h-fit rounded hover:bg-red-50 transition-colors"
+                          >
+                            <Icon icon="mdi:delete" className="w-4 h-4 text-red-600" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Photos */}
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-lg font-semibold text-gray-900">Photos</h4>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const photos = day.photos || [];
+                          const updated = [...dailyItinerary];
+                          updated[dayIndex] = {
+                            ...day,
+                            photos: [...photos, { src: '', alt: '' }]
+                          };
+                          setDailyItinerary(updated);
+                          markChanged();
+                        }}
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors"
+                      >
+                        <Icon icon="mdi:image-plus" className="w-4 h-4" />
+                        Add Photo
+                      </button>
+                    </div>
+                    <div className="space-y-3">
+                      {day.photos?.map((photo: any, photoIndex: number) => (
+                        <div key={photoIndex} className="bg-white p-4 rounded border border-gray-200 flex gap-3">
+                          <div className="flex-1 grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium mb-1 text-gray-700">Image URL</label>
+                              <input
+                                value={photo.src || ''}
+                                onChange={(e) => {
+                                  const updated = [...dailyItinerary];
+                                  const photos = [...(day.photos || [])];
+                                  photos[photoIndex] = { ...photos[photoIndex], src: e.target.value };
+                                  updated[dayIndex] = { ...day, photos };
+                                  setDailyItinerary(updated);
+                                  markChanged();
+                                }}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#037280] text-sm"
+                                placeholder="/images/day1-photo1.jpg"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium mb-1 text-gray-700">Alt Text</label>
+                              <input
+                                value={photo.alt || ''}
+                                onChange={(e) => {
+                                  const updated = [...dailyItinerary];
+                                  const photos = [...(day.photos || [])];
+                                  photos[photoIndex] = { ...photos[photoIndex], alt: e.target.value };
+                                  updated[dayIndex] = { ...day, photos };
+                                  setDailyItinerary(updated);
+                                  markChanged();
+                                }}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#037280] text-sm"
+                                placeholder="Description of the photo"
+                              />
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = [...dailyItinerary];
+                              const photos = [...(day.photos || [])];
+                              photos.splice(photoIndex, 1);
+                              updated[dayIndex] = { ...day, photos };
+                              setDailyItinerary(updated);
+                              markChanged();
+                            }}
                             className="p-2 h-fit rounded hover:bg-red-50 transition-colors"
                           >
                             <Icon icon="mdi:delete" className="w-4 h-4 text-red-600" />
